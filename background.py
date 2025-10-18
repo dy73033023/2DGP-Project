@@ -9,7 +9,6 @@ class Background:
 
     def draw(self):
         self.image.draw(400, 300)
-        self.image.draw(1200, 30)
         draw_rectangle(*self.get_bb())  # * 튜플을 풀어헤쳐서 인자로 전달
 
     def get_bb(self):
