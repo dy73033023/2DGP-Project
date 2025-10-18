@@ -5,6 +5,7 @@ import game_framework
 import game_world
 import title_mode
 
+from background import Background
 from boy import Boy
 from grass import Grass
 from ball import Ball
@@ -23,15 +24,18 @@ def handle_events():
             boy.handle_event(event)
 
 def init():
-    global boy
+    # 스테이지 배경
+    background = Background()
+    game_world.add_object(background, 0)
 
     grass = Grass()
     game_world.add_object(grass, 0)
     game_world.add_collision_pair('grass : ball', grass, None)  # 볼과 잔디 사이의 충돌 검사를 위해 빈 쌍 추가
 
+    global boy
+
     boy = Boy()
     game_world.add_object(boy, 1)
-
 
     zombies = [Zombie() for _ in range(4)]
     game_world.add_objects(zombies, 1)
