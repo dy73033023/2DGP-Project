@@ -6,10 +6,10 @@ import game_world
 import title_mode
 
 from background import Background
+from stageBlock import StageBlock
 from boy import Boy
-from grass import Grass
 from ball import Ball
-from zombie import Zombie
+
 
 boy = None
 
@@ -28,17 +28,22 @@ def init():
     background = Background()
     game_world.add_object(background, 0)
 
-    grass = Grass()
-    game_world.add_object(grass, 0)
-    game_world.add_collision_pair('grass : ball', grass, None)  # 볼과 잔디 사이의 충돌 검사를 위해 빈 쌍 추가
+    # 가로로 10개 배치, 시작 x는 화면 좌측(예: 100), 간격은 32
+    start_x, start_y, gap = 16, 16, 32
+    stageBlocks = [StageBlock(start_x + i * gap, start_y) for i in range(25)]
+    stageBlocks2 = [StageBlock(start_x + 64 + i * gap, start_y + 160) for i in range(5)]
+    stageBlocks3 = [StageBlock(start_x + 800 - 64 - i * gap, start_y + 160) for i in range(5)]
+    stageBlocks4 = [StageBlock(start_x + 400 - 80 + i * gap, start_y + 320) for i in range(5)]
+    game_world.add_objects(stageBlocks, 1)
+    game_world.add_objects(stageBlocks2, 1)
+    game_world.add_objects(stageBlocks3, 1)
+    game_world.add_objects(stageBlocks4, 1)
 
     global boy
 
     boy = Boy()
     game_world.add_object(boy, 1)
 
-    zombies = [Zombie() for _ in range(4)]
-    game_world.add_objects(zombies, 1)
 
     global balls
     balls = [Ball(random.randint(100, 1500), 60, 0) for _ in range(30)]
@@ -47,19 +52,9 @@ def init():
     # 소년과 볼 사이에 대한 충돌 검사가 필요하다는 정보를 추가
     game_world.add_collision_pair('boy : ball', boy, None)
 
-    # 소년과 좀비 사이에 대한 충돌 검사가 필요하다는 정보를 추가
-    game_world.add_collision_pair('boy : zombie', boy, None)
-
-    for zombie in zombies:
-        # 소년과 좀비 사이에 대한 충돌 검사가 필요하다는 정보를 추가
-        game_world.add_collision_pair('boy : zombie', None, zombie)
-        # 좀비와 볼 사이에 대한 충돌 검사가 필요하다는 정보를 추가
-        game_world.add_collision_pair('zombie : ball', zombie, None)
 
     for ball in balls:
         game_world.add_collision_pair('boy : ball', None, ball)
-
-
 
 
 
@@ -79,4 +74,3 @@ def finish():
 
 def pause(): pass
 def resume(): pass
-
