@@ -1,6 +1,7 @@
 from pico2d import *
 import game_framework
 import play_mode
+import time
 
 image = None
 font = None
@@ -9,8 +10,8 @@ font_small = None
 def init():
     global image, font, font_small
     image = load_image('title.png')
-    font = load_font('megaman.ttf', 60)
-    font_small = load_font('megaman.ttf', 30)
+    font = load_font('megaman.ttf', 70)
+    font_small = load_font('megaman.ttf', 20)
 
 def finish():
     global image, font, font_small
@@ -31,8 +32,10 @@ def draw():
     clear_canvas()
     image.draw(400,300)
     # 선택한 폰트로 텍스트 출력
-    font.draw(125, 350, 'DROP  FIGHT', (255, 255, 255))
-    font_small.draw(100, 100, 'Press Space to Start', (255, 255, 255))
+    font.draw(75, 350, 'DROP  FIGHT', (255, 255, 255))
+    # "Press Space to Start" 깜빡이는 효과
+    if int(time.time() * 2) % 2 == 0:
+        font_small.draw(125, 125, 'Press SPACE to Start', (255, 255, 255))
     update_canvas()
 
 def update():
