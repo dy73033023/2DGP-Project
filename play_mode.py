@@ -25,8 +25,8 @@ def handle_events():
 
 def init():
     # 스테이지 배경
-    background = Background()
-    game_world.add_object(background, 0)
+    # background = Background()
+    # game_world.add_object(background, 0)
 
     # 가로로 10개 배치, 시작 x는 화면 좌측(예: 100), 간격은 32
     start_x, start_y, gap = 16, 16, 32
