@@ -127,9 +127,6 @@ class Run:
         else: # face_dir == -1: # left
             self.boy.image.clip_draw(int(self.boy.frame) * 100, 0, 100, 100, self.boy.x, self.boy.y)
 
-
-
-
 class Boy:
     def __init__(self):
 

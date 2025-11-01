@@ -25,13 +25,12 @@ class StageBlock:
         self.y = y
         self.load_images()
         # 이미지 인덱스는 1~10 까지이므로 randint 범위를 수정
-        self.frame = random.randint(1, 10)
+        self.frame = 1
         self.width, self.length = 32, 32
         self.bb_x, self.bb_y = 32, 32
 
     def update(self):
         self.frame = (self.frame + FRAMES_PER_ACTION * ACTION_PER_TIME * game_framework.frame_time) % FRAMES_PER_ACTION
-
 
     def draw(self):
         StageBlock.images['stageBlock'][int(self.frame)].draw(self.x, self.y, self.width, self.length)
