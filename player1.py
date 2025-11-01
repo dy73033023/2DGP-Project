@@ -176,7 +176,7 @@ class Run:
         else:
             self.idle_delay = 0
 
-        self.player1.x = clamp(10, self.player1.x, 1600 - 10)
+        self.player1.x = clamp(10, self.player1.x, 800 - 10)
 
     def draw(self):
         frame_idx = int(self.frame) % 5
@@ -235,7 +235,7 @@ class Attack:
             self.animation_finished = True
             self.player1.state_machine.handle_state_event(('TIMEOUT', None))
 
-        self.player1.x = clamp(10, self.player1.x, 1600 - 10)
+        self.player1.x = clamp(10, self.player1.x, 800 - 10)
 
     def draw(self):
         frame_idx = int(self.frame) % 9
@@ -326,7 +326,7 @@ class Jump:
             self.player1.state_machine.handle_state_event(('TIMEOUT', None))
 
         # 화면 경계
-        self.player1.x = clamp(10, self.player1.x, 1600 - 10)
+        self.player1.x = clamp(10, self.player1.x, 800 - 10)
 
     def draw(self):
         frame_idx = int(self.frame) % 7
@@ -371,6 +371,7 @@ class Player1:
 
     def update(self):
         self.state_machine.update()
+
 
     def handle_event(self, event):
         self.state_machine.handle_state_event(('INPUT', event))
