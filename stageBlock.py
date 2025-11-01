@@ -3,7 +3,6 @@ import game_framework
 
 from pico2d import *
 
-# zombie Action Speed
 TIME_PER_ACTION = 1.0
 ACTION_PER_TIME = 1.0 / TIME_PER_ACTION
 FRAMES_PER_ACTION = 10.0
