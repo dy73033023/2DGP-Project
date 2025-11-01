@@ -29,20 +29,6 @@ def left_down(e):
 def left_up(e):
     return e[0] == 'INPUT' and e[1].type == SDL_KEYUP and e[1].key == SDLK_LEFT
 
-# player의 Run Speed 계산
-
-# player Run Speed
-PIXEL_PER_METER = (10.0 / 0.3)  # 10 pixel 30 cm
-RUN_SPEED_KMPH = 20.0  # Km / Hour
-RUN_SPEED_MPM = (RUN_SPEED_KMPH * 1000.0 / 60.0)
-RUN_SPEED_MPS = (RUN_SPEED_MPM / 60.0)
-RUN_SPEED_PPS = (RUN_SPEED_MPS * PIXEL_PER_METER)
-
-# player Action Speed
-TIME_PER_ACTION = 0.5
-ACTION_PER_TIME = 1.0 / TIME_PER_ACTION
-FRAMES_PER_ACTION = 8
-
 
 
 class Appearance:
@@ -54,20 +40,32 @@ class Appearance:
 
     def __init__(self, player1):
         self.frame = 0
-        self.width, self.length = 70, 70
+        self.width, self.length = 50, 50
         self.player1 = player1
         self.load_images()
+        self.animation_finished = False
+
+        # player Action Speed
+        self.TIME_PER_ACTION = 0.5
+        self.ACTION_PER_TIME = 1.0 / self.TIME_PER_ACTION
+        self.FRAMES_PER_ACTION = 8
 
     def enter(self, e):
-        self.player1.wait_time = get_time()
+        self.frame = 0
+        self.animation_finished = False
         self.player1.dir = 0
 
     def exit(self, e):
         pass
 
     def do(self):
-        self.player1.frame = (self.player1.frame + FRAMES_PER_ACTION * ACTION_PER_TIME * game_framework.frame_time) % len(Appearance.images['appearance'])
-        if get_time() - self.player1.wait_time > 3:
+        self.player1.frame = ((self.player1.frame + self.FRAMES_PER_ACTION * self.ACTION_PER_TIME * game_framework.frame_time) %
+                              len(Appearance.images['appearance']))
+        self.frame += self.FRAMES_PER_ACTION * self.ACTION_PER_TIME * game_framework.frame_time
+
+        # 마지막 프레임 넘어가면 바로 Idle로 전이
+        if self.frame >= 14:  # 0~13까지 14프레임
+            self.animation_finished = True
             self.player1.state_machine.handle_state_event(('TIMEOUT', None))
 
     def draw(self):
@@ -94,6 +92,10 @@ class Idle:
         self.player1 = player1
         self.load_images()
 
+        self.TIME_PER_ACTION = 0.5
+        self.ACTION_PER_TIME = 1.0 / self.TIME_PER_ACTION
+        self.FRAMES_PER_ACTION = 8
+
     def enter(self, e):
         self.player1.wait_time = get_time()
         self.player1.dir = 0
@@ -102,7 +104,7 @@ class Idle:
         pass
 
     def do(self):
-        self.player1.frame = (self.player1.frame + FRAMES_PER_ACTION * ACTION_PER_TIME * game_framework.frame_time) % len(
+        self.player1.frame = (self.player1.frame + self.FRAMES_PER_ACTION * self.ACTION_PER_TIME * game_framework.frame_time) % len(
             Idle.images['idle'])
         if get_time() - self.player1.wait_time > 3:
             self.player1.state_machine.handle_state_event(('TIMEOUT', None))
@@ -124,7 +126,6 @@ class Idle:
         return self.player1.x - 20, self.player1.y - 40, self.player1.x + 20, self.player1.y + 40
 
 
-
 class Run:
     images = None
     def load_images(self):
@@ -138,6 +139,17 @@ class Run:
         self.player1 = player1
         self.load_images()
 
+        # player의 Run Speed 계산
+        self.PIXEL_PER_METER = (10.0 / 0.3)  # 10 pixel 30 cm
+        self.RUN_SPEED_KMPH = 20.0  # Km / Hour
+        self.RUN_SPEED_MPM = (self.RUN_SPEED_KMPH * 1000.0 / 60.0)
+        self.RUN_SPEED_MPS = (self.RUN_SPEED_MPM / 60.0)
+        self.RUN_SPEED_PPS = (self.RUN_SPEED_MPS * self.PIXEL_PER_METER)
+
+        self.TIME_PER_ACTION = 0.5
+        self.ACTION_PER_TIME = 1.0 / self.TIME_PER_ACTION
+        self.FRAMES_PER_ACTION = 8
+
     def enter(self, e):
         if right_down(e) or left_up(e):
             self.player1.dir = self.player1.face_dir = 1
@@ -148,8 +160,9 @@ class Run:
         pass
 
     def do(self):
-        self.player1.frame = ((self.player1.frame + FRAMES_PER_ACTION * ACTION_PER_TIME * game_framework.frame_time) % len(Run.images['run']))
-        self.player1.x += self.player1.dir * RUN_SPEED_PPS * game_framework.frame_time
+        self.player1.frame = ((self.player1.frame + self.FRAMES_PER_ACTION * self.ACTION_PER_TIME
+                               * game_framework.frame_time) % len(Run.images['run']))
+        self.player1.x += self.player1.dir * self.RUN_SPEED_PPS * game_framework.frame_time
         pass
 
     def draw(self):
@@ -182,12 +195,6 @@ class Player1:
         self.Appearance = Appearance(self)
         self.IDLE = Idle(self)
         self.RUN = Run(self)
-
-        # 이제 Appearance.images가 로드되었으므로 안전하게 접근 가능
-        if Appearance.images and 'appearance' in Appearance.images:
-            self.temp_image = Appearance.images['appearance'][0]
-        else:
-            self.temp_image = None
 
         self.state_machine = StateMachine(
             self.Appearance,
