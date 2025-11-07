@@ -8,8 +8,10 @@ import title_mode
 from background import Background
 from stageBlock import StageBlock
 from player1 import Player1
+from player2 import Player2
 
 player1 = None
+player2 = None
 
 def handle_events():
     event_list = get_events()
@@ -20,6 +22,7 @@ def handle_events():
             game_framework.change_mode(title_mode)
         else:
             player1.handle_event(event)
+            player2.handle_event(event)
 
 def init():
     # 스테이지 배경
@@ -40,10 +43,12 @@ def init():
 
     # 플레이어 1 - 왼쪽에서 시작
     global player1
-
     player1 = Player1()
     game_world.add_object(player1, 1)  # Player1이 아니라 player1 인스턴스를 추가
 
+    global player2
+    player2 = Player2()
+    game_world.add_object(player2, 1)
 
 def update():
     game_world.update()
