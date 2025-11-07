@@ -1,10 +1,7 @@
-from pico2d import load_image, get_time, load_font, draw_rectangle, clamp
-from sdl2 import SDL_KEYDOWN, SDL_KEYUP, SDLK_SPACE, SDLK_RIGHT, SDLK_LEFT, SDLK_g
+from pico2d import load_image, draw_rectangle, clamp
+from sdl2 import SDL_KEYDOWN, SDL_KEYUP, SDLK_SPACE, SDLK_d, SDLK_a, SDLK_g
 
-
-import game_world
 import game_framework
-
 from state_machine import StateMachine
 
 
@@ -12,19 +9,19 @@ from state_machine import StateMachine
 time_out = lambda e: e[0] == 'TIMEOUT'
 
 def right_down(e):
-    return e[0] == 'INPUT' and e[1].type == SDL_KEYDOWN and e[1].key == SDLK_RIGHT
+    return e[0] == 'INPUT' and e[1].type == SDL_KEYDOWN and e[1].key == SDLK_d
 
 
 def right_up(e):
-    return e[0] == 'INPUT' and e[1].type == SDL_KEYUP and e[1].key == SDLK_RIGHT
+    return e[0] == 'INPUT' and e[1].type == SDL_KEYUP and e[1].key == SDLK_d
 
 
 def left_down(e):
-    return e[0] == 'INPUT' and e[1].type == SDL_KEYDOWN and e[1].key == SDLK_LEFT
+    return e[0] == 'INPUT' and e[1].type == SDL_KEYDOWN and e[1].key == SDLK_a
 
 
 def left_up(e):
-    return e[0] == 'INPUT' and e[1].type == SDL_KEYUP and e[1].key == SDLK_LEFT
+    return e[0] == 'INPUT' and e[1].type == SDL_KEYUP and e[1].key == SDLK_a
 
 # 공격 키다운
 
@@ -197,7 +194,7 @@ class Attack:
     def load_images(self):
         if Attack.images is None:
             Attack.images = {}
-            Attack.images['attack'] = [load_image(f"./player_1/attack ({i}).png") for i in range(1, 10)]
+            Attack.images['attack'] = [load_image(f"./player_1/attack ({i}).png") for i in range(1, 9)]
 
     def __init__(self, player1):
         self.frame = 0.0
@@ -214,7 +211,7 @@ class Attack:
 
         self.TIME_PER_ACTION = 0.5
         self.ACTION_PER_TIME = 1.0 / self.TIME_PER_ACTION
-        self.FRAMES_PER_ACTION = 9
+        self.FRAMES_PER_ACTION = 8
 
     def enter(self, e):
         self.frame = 0.0  # ★ 프레임 초기화!
@@ -231,20 +228,20 @@ class Attack:
         self.frame += self.FRAMES_PER_ACTION * self.ACTION_PER_TIME * game_framework.frame_time
 
         # 마지막 프레임 넘어가면 바로 Idle로 전이
-        if self.frame >= 8:  # 0~8까지 9프레임
+        if self.frame >= 7:  # 0~7까지 8프레임
             self.animation_finished = True
             self.player1.state_machine.handle_state_event(('TIMEOUT', None))
 
         self.player1.x = clamp(10, self.player1.x, 800 - 10)
 
     def draw(self):
-        frame_idx = int(self.frame) % 9
+        frame_idx = int(self.frame) % 8
         img = Attack.images['attack'][frame_idx]
         # ★ 원본 이미지 크기 자르기 (캐릭터 크기 고정!)
         if self.player1.face_dir == 1:
-            img.draw(self.player1.x, self.player1.y + 5)
+            img.draw(self.player1.x, self.player1.y)
         else:
-            img.composite_draw(0, 'h', self.player1.x, self.player1.y + 5)  # ★ 뒤집기만!!
+            img.composite_draw(0, 'h', self.player1.x, self.player1.y)  # ★ 뒤집기만!!
         draw_rectangle(*self.get_bb())
 
     def get_bb(self):
@@ -343,7 +340,7 @@ class Jump:
 
 class Player1:
     def __init__(self):
-        self.x, self.y = 400, 50
+        self.x, self.y = 100, 50
         self.face_dir = 1
         self.dir = 0
 
