@@ -1,9 +1,8 @@
 from pico2d import load_image, draw_rectangle, clamp
-from sdl2 import SDL_KEYDOWN, SDL_KEYUP, SDLK_SPACE, SDLK_d, SDLK_a, SDLK_g
+from sdl2 import SDL_KEYDOWN, SDL_KEYUP, SDLK_SPACE, SDLK_g, SDLK_d, SDLK_a
 
 import game_framework
 from state_machine import StateMachine
-
 
 
 time_out = lambda e: e[0] == 'TIMEOUT'
