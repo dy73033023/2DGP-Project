@@ -5,7 +5,6 @@ import game_world
 import game_framework
 
 from ball import Ball
-from zombie import Zombie
 from state_machine import StateMachine
 
 
@@ -138,7 +137,7 @@ class Boy:
 
         self.font = load_font('ENCR10B.TTF', 16)
 
-        self.x, self.y = 0, 90
+        self.x, self.y = 0, 74
         self.frame = 0
         self.face_dir = 1
         self.dir = 0
@@ -175,7 +174,6 @@ class Boy:
             self.ball_count -= 1
             ball = Ball(self.x+self.face_dir*40, self.y+100, self.face_dir * 15)
             game_world.add_object(ball, 1)
-            game_world.add_collision_pair('grass : ball', None, ball)
             # 1초 후에 아래 작업이 수행 되도록 예약
             game_world.add_collision_pair('boy : ball', None, ball)
             game_world.add_collision_pair('zombie : ball', None, ball)
@@ -187,7 +185,3 @@ class Boy:
         if group == 'boy : ball':
             self.ball_count += 1
             print('boy got ball!')
-        elif group == 'boy : zombie':
-            game_world.remove_object(self)
-            # 프로그램 종료
-            game_framework.quit()
