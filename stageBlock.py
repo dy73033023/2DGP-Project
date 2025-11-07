@@ -1,13 +1,11 @@
-import random
-import game_framework
-
 from pico2d import *
+import game_framework
+import random
+
 
 TIME_PER_ACTION = 1.0
 ACTION_PER_TIME = 1.0 / TIME_PER_ACTION
-FRAMES_PER_ACTION = 10.0
-
-animation_names = ['stageBlock']
+FRAMES_PER_ACTION = 10 # 이미지 개수에 맞게 수정
 
 class StageBlock:
     images = None
@@ -15,8 +13,7 @@ class StageBlock:
     def load_images(self):
         if StageBlock.images == None:
             StageBlock.images = {}
-            for name in animation_names:
-                StageBlock.images[name] = [load_image("./stageBlock/" + name + " (%d)" % i + ".png") for i in range(1, 11)]
+            StageBlock.images['stageBlock'] = [load_image(f"./stageBlock/stageBlock ({i}).png") for i in range(1, 11)]
 
     def __init__(self, x, y):
         # 전달받은 x를 사용하도록 변경
@@ -24,7 +21,7 @@ class StageBlock:
         self.y = y
         self.load_images()
         # 이미지 인덱스는 1~10 까지이므로 randint 범위를 수정
-        self.frame = 1
+        self.frame = 0.0
         self.width, self.length = 32, 32
         self.bb_x, self.bb_y = 32, 32
 
