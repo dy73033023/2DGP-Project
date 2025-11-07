@@ -6,7 +6,6 @@ import game_framework
 from state_machine import StateMachine
 from stageBlock import StageBlock
 
-
 time_out = lambda e: e[0] == 'TIMEOUT'
 run_off = lambda e: e[0] == 'RUN_OFF'
 fall_start = lambda e: e[0] == 'FALL_START'
