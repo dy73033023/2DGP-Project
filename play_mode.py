@@ -7,11 +7,17 @@ import title_mode
 
 from background import Background
 from stageBlock import StageBlock
+from obstacle import Obstacle
 from player1 import Player1
 from player2 import Player2
 
 player1 = None
 player2 = None
+stageBlocks = None
+stageBlocks2 =None
+stageBlocks3 =None
+stageBlocks4 =None
+obstacles = None
 
 def handle_events():
     event_list = get_events()
@@ -41,11 +47,17 @@ def init():
     game_world.add_objects(stageBlocks3, 1)
     game_world.add_objects(stageBlocks4, 1)
 
+    # 떨어지는 장애물들
+    # 시작 위치 - x는 랜덤 y 600 이상
+    obstacles = [Obstacle(random.randint(0, 800),random.randint(600, 1200)) for _ in range(40)]
+    game_world.add_objects(obstacles, 1)
+
     # 플레이어 1 - 왼쪽에서 시작
     global player1
     player1 = Player1()
-    game_world.add_object(player1, 1)  # Player1이 아니라 player1 인스턴스를 추가
+    game_world.add_object(player1, 1)
 
+    # 플레이어 2 - 오른쪽에서 시작
     global player2
     player2 = Player2()
     game_world.add_object(player2, 1)
