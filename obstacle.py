@@ -1,5 +1,6 @@
 from pico2d import *
 import game_framework
+import game_world
 import random
 
 
@@ -24,6 +25,7 @@ class Obstacle:
         self.frame = 0.0
         self.width, self.length = 32, 32
         self.bb_x, self.bb_y = 32, 32
+        self.obstacle_hit = False
 
     def update(self):
         self.frame = (self.frame + FRAMES_PER_ACTION * ACTION_PER_TIME * game_framework.frame_time) % FRAMES_PER_ACTION

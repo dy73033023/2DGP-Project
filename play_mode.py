@@ -31,18 +31,19 @@ def handle_events():
 
 def init():
     # 스테이지 배경
-    # background = Background()
-    # game_world.add_object(background, 0)
+    background = Background()
+    game_world.add_object(background, 0)
 
     # 스테이지 블록들
     # 가로로 10개 배치, 시작 x는 화면 좌측(예: 100), 간격은 32
-    global stageBlocks, stageBlocks2, stageBlocks3, stageBlocks4
     start_x, start_y, gap = 16, 16, 32
     blocks = [
         [StageBlock(start_x + i * gap, start_y) for i in range(25)],
-        [StageBlock(start_x + 64 + i * gap, start_y + 160) for i in range(5)],
-        [StageBlock(start_x + 800 - 64 - i * gap, start_y + 160) for i in range(5)],
-        [StageBlock(start_x + 400 - 80 + i * gap, start_y + 320) for i in range(5)]
+        [StageBlock(start_x + 84 + 64 + i * gap, start_y + 80) for i in range(5)],
+        [StageBlock(start_x + 84 + 64 + i * gap, start_y + 240) for i in range(5)],
+        [StageBlock(start_x + 684 - 64 - i * gap, start_y + 80) for i in range(5)],
+        [StageBlock(start_x + 684 - 64 - i * gap, start_y + 240) for i in range(5)],
+        [StageBlock(start_x + 400 - 80 + i * gap, start_y + 160) for i in range(5)]
     ]
     for b in blocks:
         game_world.add_objects(b, 1)
@@ -72,6 +73,12 @@ def init():
     # ---------- 충돌 페어 등록 ----------
     game_world.add_collision_pair('sword:player2', None,None)
     game_world.add_collision_pair('sword:player1', None,None)
+    game_world.add_collision_pair('obstacle:player1', None, None)
+    for obs in obstacles:
+        game_world.add_collision_pair('obstacle:player1', obs, player1)
+    game_world.add_collision_pair('obstacle:player2', None, None)
+    for obs in obstacles:
+        game_world.add_collision_pair('obstacle:player2', obs, player2)
 
     # ---------- 체력 UI (플레이어를 따라다님) ----------
     global hp_player1, hp_player2

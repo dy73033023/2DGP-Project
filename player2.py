@@ -98,6 +98,7 @@ class Idle:
     def enter(self, e):
         self.frame = 0.0
         self.player2.dir = 0
+        self.player2.obstacle_hit = False
 
     def exit(self, e):
         pass
@@ -158,6 +159,7 @@ class Run:
             self.player2.dir = 0
 
         self.idle_delay = 0
+        self.player2.obstacle_hit = False
 
     def exit(self, e):
         pass
@@ -223,6 +225,7 @@ class Attack:
         self.frame = 0.0  # ★ 프레임 초기화!
         self.animation_finished = False
         self.player2.attack_hit = False
+        self.player2.obstacle_hit = False
         if hasattr(self.player2, 'attack_target'):
             game_world.update_collision_pair('sword:player1', self.player2, self.player2.attack_target)
 
@@ -299,6 +302,7 @@ class Jump:
     def enter(self, e):
         self.frame = 0.0  # ★ 프레임 초기화!
         self.animation_finished = False
+        self.player2.obstacle_hit = False
 
         # 현재 위치가 땅 위인지 확인 (착지 후 재점프 방지)
         if self.player2.y <= self.ground_y + 5:  # 약간의 여유
@@ -368,6 +372,9 @@ class Player2:
         # 플레이어 체력
         self.hp = 5
 
+        self.attack_hit = False
+        self.obstacle_hit = False
+
         # 플레이어 상태 관리 (먼저 생성해서 이미지 로드)
         self.APPEARANCE = Appearance(self)
         self.IDLE = Idle(self)
@@ -417,28 +424,34 @@ class Player2:
         return None
 
     def handle_collision(self, group, other):
-        if group != 'sword:player2':
-            return
-
-        atk_bb = other.get_attack_bb()
-        if not atk_bb:
-            return
-
-        # 이미 이번 공격으로 히트했으면 무시
-        if getattr(other, 'attack_hit', False):
-            return
-
-        # 간단한 사각형 겹침 검사
         def _overlap(a, b):
             ax1, ay1, ax2, ay2 = a
             bx1, by1, bx2, by2 = b
             return not (ax2 < bx1 or bx2 < ax1 or ay2 < by1 or by2 < ay1)
 
-        if not _overlap(atk_bb, self.get_bb()):
+        def _get_attack_bb(src):
+            return getattr(src, 'get_attack_bb', lambda: None)()
+
+        if group.startswith('sword:'):
+            atk_bb = _get_attack_bb(other)
+            if not atk_bb or getattr(other, 'attack_hit', False):
+                return
+            if not _overlap(atk_bb, self.get_bb()):
+                return
+            self.hp = max(0, self.hp - 1)
+            other.attack_hit = True
+            print("Player2 hit! HP:", self.hp)
             return
 
-        # 한 번만 HP 감소
-        self.hp = max(0, self.hp - 1)
-        other.attack_hit = True
-        print("Player2 hit! HP:", self.hp)
+        if group.startswith('obstacle:'):
+            bb = getattr(other, 'get_bb', lambda: None)()
+            if not bb or getattr(other, 'obstacle_hit', False):
+                return
+            if not _overlap(bb, self.get_bb()):
+                return
+            self.hp = max(0, self.hp - 1)
+            other.obstacle_hit = True
+            print("Player2 hit by obstacle! HP:", self.hp)
+            game_world.remove_object(other)
+            return
 
