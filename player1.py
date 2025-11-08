@@ -72,10 +72,9 @@ class Appearance:
         frame_idx = int(self.frame) % 14
         img = Appearance.images['appearance'][frame_idx]
         img.draw(self.player1.x, self.player1.y)  # 뒤집기 없어도 됨
-        draw_rectangle(*self.get_bb())
 
     def get_bb(self):
-        return self.player1.x - 20, self.player1.y - 40, self.player1.x + 20, self.player1.y + 40
+        pass
 
 
 
@@ -117,9 +116,10 @@ class Idle:
         draw_rectangle(*self.get_bb())
 
     def get_bb(self):
-        return self.player1.x - 20, self.player1.y - 40, self.player1.x + 20, self.player1.y + 40
-
-
+        if self.player1.face_dir == 1:
+            return self.player1.x - 5, self.player1.y - 15, self.player1.x + 20, self.player1.y + 15
+        else:
+            return self.player1.x - 20, self.player1.y - 15, self.player1.x + 5, self.player1.y + 15
 
 class Run:
     images = None
@@ -185,7 +185,10 @@ class Run:
         draw_rectangle(*self.get_bb())
 
     def get_bb(self):
-        return self.player1.x - 20, self.player1.y - 40, self.player1.x + 20, self.player1.y + 40
+        if self.player1.face_dir == 1:
+            return self.player1.x - 5, self.player1.y - 15, self.player1.x + 20, self.player1.y + 15
+        else:
+            return self.player1.x - 20, self.player1.y - 15, self.player1.x + 5, self.player1.y + 15
 
 class Attack:
     images = None
@@ -244,8 +247,10 @@ class Attack:
         draw_rectangle(*self.get_bb())
 
     def get_bb(self):
-        return self.player1.x - 20, self.player1.y - 40, self.player1.x + 20, self.player1.y + 40
-
+        if self.player1.face_dir == 1:
+            return self.player1.x - 25, self.player1.y - 15, self.player1.x + 5, self.player1.y + 15
+        else:
+            return self.player1.x - 5, self.player1.y - 15, self.player1.x + 25, self.player1.y + 15
 
 class Jump:
     images = None
@@ -335,7 +340,10 @@ class Jump:
         draw_rectangle(*self.get_bb())
 
     def get_bb(self):
-        return self.player1.x - 20, self.player1.y - 40, self.player1.x + 20, self.player1.y + 40
+        if self.player1.face_dir == 1:
+            return self.player1.x - 10, self.player1.y - 17, self.player1.x + 15, self.player1.y + 17
+        else:
+            return self.player1.x - 15, self.player1.y - 17, self.player1.x + 10, self.player1.y + 17
 
 class Player1:
     def __init__(self):
@@ -374,10 +382,9 @@ class Player1:
 
     def draw(self):
         self.state_machine.draw()
-        draw_rectangle(*self.get_bb())
 
     def get_bb(self):
-        return self.x - 20, self.y - 40, self.x + 20, self.y + 40
+        pass
 
     def handle_collision(self, group, other):
         pass
