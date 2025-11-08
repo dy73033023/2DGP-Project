@@ -6,7 +6,6 @@ import game_framework
 from state_machine import StateMachine
 
 
-
 time_out = lambda e: e[0] == 'TIMEOUT'
 
 def right_down(e):
@@ -223,9 +222,12 @@ class Attack:
     def enter(self, e):
         self.frame = 0.0  # ★ 프레임 초기화!
         self.animation_finished = False
+        self.player2.attack_hit = False
+        if hasattr(self.player2, 'attack_target'):
+            game_world.update_collision_pair('sword:player1', self.player2, self.player2.attack_target)
 
     def exit(self, e):
-        pass
+        game_world.update_collision_pair('sword:player1', None, None)
 
     def do(self):
         if self.animation_finished:
@@ -363,6 +365,8 @@ class Player2:
         self.x, self.y = 700, 50
         self.face_dir = -1
         self.dir = 0
+        # 플레이어 체력
+        self.hp = 5
 
         # 플레이어 상태 관리 (먼저 생성해서 이미지 로드)
         self.APPEARANCE = Appearance(self)
@@ -396,7 +400,45 @@ class Player2:
         self.state_machine.draw()
 
     def get_bb(self):
-        pass
+        # 현재 상태의 바운딩 박스를 안전하게 반환 (없으면 임시 박스)
+        cur = getattr(self.state_machine, 'cur_state', None)
+        if cur and hasattr(cur, 'get_bb'):
+            bb = cur.get_bb()
+            if bb:
+                return bb
+        # fallback (등장 등에서 None 방지)
+        return self.x - 15, self.y - 15, self.x + 15, self.y + 15
+
+    def get_attack_bb(self):
+        # 현재 상태가 공격 히트박스를 제공하면 그걸 사용, 아니면 None
+        cur = getattr(self.state_machine, 'cur_state', None)
+        if cur and hasattr(cur, 'get_attack_bb'):
+            return cur.get_attack_bb()
+        return None
 
     def handle_collision(self, group, other):
-        pass
+        if group != 'sword:player2':
+            return
+
+        atk_bb = other.get_attack_bb()
+        if not atk_bb:
+            return
+
+        # 이미 이번 공격으로 히트했으면 무시
+        if getattr(other, 'attack_hit', False):
+            return
+
+        # 간단한 사각형 겹침 검사
+        def _overlap(a, b):
+            ax1, ay1, ax2, ay2 = a
+            bx1, by1, bx2, by2 = b
+            return not (ax2 < bx1 or bx2 < ax1 or ay2 < by1 or by2 < ay1)
+
+        if not _overlap(atk_bb, self.get_bb()):
+            return
+
+        # 한 번만 HP 감소
+        self.hp = max(0, self.hp - 1)
+        other.attack_hit = True
+        print("Player2 hit! HP:", self.hp)
+

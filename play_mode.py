@@ -65,6 +65,14 @@ def init():
     player2 = Player2()
     game_world.add_object(player2, 1)
 
+    # 공격 대상 연결
+    player1.attack_target = player2
+    player2.attack_target = player1
+
+    # ---------- 충돌 페어 등록 ----------
+    game_world.add_collision_pair('sword:player2', None,None)
+    game_world.add_collision_pair('sword:player1', None,None)
+
     # ---------- 체력 UI (플레이어를 따라다님) ----------
     global hp_player1, hp_player2
 
@@ -89,6 +97,20 @@ def update():
         hp.x = player2.x + 32 - i * 15
         hp.y = player2.y + 30
 
+    # ★ HP에 따라 하트 UI 제거
+    # Player1 HP에 따라 하트 제거
+    if len(hp_player1) > player1.hp:
+        for _ in range(len(hp_player1) - player1.hp):
+            if hp_player1:
+                removed = hp_player1.pop()
+                game_world.remove_object(removed)
+
+    # Player2 HP에 따라 하트 제거
+    if len(hp_player2) > player2.hp:
+        for _ in range(len(hp_player2) - player2.hp):
+            if hp_player2:
+                removed = hp_player2.pop()
+                game_world.remove_object(removed)
 
 def draw():
     clear_canvas()
