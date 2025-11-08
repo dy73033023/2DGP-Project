@@ -281,9 +281,6 @@ class Jump:
         self.HORIZONTAL_BOOST = 6.0  # 수평 초속 (m/s)
         self.GRAVITY = 45.0  # 중력 (조금 세게 → 빠른 착지)
 
-        # player의 Run Speed 계산
-        self.PIXEL_PER_METER = (10.0 / 0.3)  # 10 pixel 30 cm
-
         self.TIME_PER_ACTION = 1.0
         self.ACTION_PER_TIME = 1.0 / self.TIME_PER_ACTION
         self.FRAMES_PER_ACTION = 7
@@ -361,16 +358,16 @@ class Player1:
         self.dir = 0
 
         # 플레이어 상태 관리 (먼저 생성해서 이미지 로드)
-        self.Appearance = Appearance(self)
+        self.APPEARANCE = Appearance(self)
         self.IDLE = Idle(self)
         self.RUN = Run(self)
         self.ATTACK = Attack(self)
         self.JUMP = Jump(self)
 
         self.state_machine = StateMachine(
-            self.Appearance,
+            self.APPEARANCE,
             {
-                self.Appearance : {time_out: self.IDLE},
+                self.APPEARANCE : {time_out: self.IDLE},
                 self.IDLE : {space_down: self.JUMP,
                              right_down: self.RUN, left_down: self.RUN,
                              g_down: self.ATTACK},

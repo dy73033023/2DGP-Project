@@ -7,5 +7,4 @@ open_canvas(800, 600)
 game_framework.run(start_mode)
 close_canvas()
 
-# 커밋용 주석처리g
-g
+# 커밋용 주석처리
