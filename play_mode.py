@@ -33,8 +33,8 @@ def handle_events():
 
 def init():
     # 스테이지 배경
-    # background = Background()
-    # game_world.add_object(background, 0)
+    background = Background()
+    game_world.add_object(background, 0)
 
     # 스테이지 블록들
     # 가로로 10개 배치, 시작 x는 화면 좌측(예: 100), 간격은 32
@@ -80,6 +80,12 @@ def init():
     # ---------- 충돌 페어 등록 ----------
     game_world.add_collision_pair('sword:player2', None,None)
     game_world.add_collision_pair('sword:player1', None,None)
+    game_world.add_collision_pair('obstacle:player1', None, None)
+    for obs in obstacles:
+        game_world.add_collision_pair('obstacle:player1', obs, player1)
+    game_world.add_collision_pair('obstacle:player2', None, None)
+    for obs in obstacles:
+        game_world.add_collision_pair('obstacle:player2', obs, player2)
 
     # 장애물 충돌
     game_world.add_collision_pair('obstacle:player1', None, None)
