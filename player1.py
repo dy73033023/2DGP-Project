@@ -245,12 +245,21 @@ class Attack:
         else:
             img.composite_draw(0, 'h', self.player1.x, self.player1.y)  # ★ 뒤집기만!!
         draw_rectangle(*self.get_bb())
+        draw_rectangle(*self.get_attack_bb())
 
     def get_bb(self):
         if self.player1.face_dir == 1:
             return self.player1.x - 25, self.player1.y - 15, self.player1.x + 5, self.player1.y + 15
         else:
             return self.player1.x - 5, self.player1.y - 15, self.player1.x + 25, self.player1.y + 15
+
+    # 칼 범위 바운딩 박스
+    def get_attack_bb(self):
+        # 칼 범위 (몸보다 앞쪽으로)
+        if self.player1.face_dir == 1:
+            return self.player1.x + 5, self.player1.y - 15, self.player1.x + 30, self.player1.y + 15
+        else:
+            return self.player1.x - 30, self.player1.y - 15, self.player1.x - 5, self.player1.y + 15
 
 class Jump:
     images = None
