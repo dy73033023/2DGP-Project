@@ -40,4 +40,13 @@ class StageBlock:
                 self.x + self.bb_x/2, self.y + self.bb_y/2)
 
     def handle_collision(self, group, other):
-        pass
+        if group.startswith('player:stageBlock'):
+            block_bb = self.get_bb()
+            player_bb = other.get_bb()
+
+            # 플레이어가 블록 위에 있는지 확인
+            if player_bb[1] >= block_bb[3] - 5:
+                other.y = block_bb[3] + (player_bb[3] - player_bb[1]) / 2
+                if hasattr(other.state_machine.cur_state, 'yv'):
+                    other.state_machine.cur_state.yv = 0
+                    other.state_machine.cur_state.ground_y = block_bb[3]

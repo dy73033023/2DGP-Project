@@ -1,14 +1,15 @@
-from idlelib.browser import browseable_extension_blocklist
-
 from pico2d import load_image, draw_rectangle, clamp
 from sdl2 import SDL_KEYDOWN, SDL_KEYUP, SDLK_SPACE, SDLK_g, SDLK_d, SDLK_a
 
 import game_world
 import game_framework
 from state_machine import StateMachine
+from stageBlock import StageBlock
 
 
 time_out = lambda e: e[0] == 'TIMEOUT'
+run_off = lambda e: e[0] == 'RUN_OFF'
+fall_start = lambda e: e[0] == 'FALL_START'
 
 def right_down(e):
     return e[0] == 'INPUT' and e[1].type == SDL_KEYDOWN and e[1].key == SDLK_d
@@ -169,6 +170,10 @@ class Run:
         self.frame += self.FRAMES_PER_ACTION * self.ACTION_PER_TIME * game_framework.frame_time
         self.player1.x += self.player1.dir * self.RUN_SPEED_PPS * game_framework.frame_time
 
+        # dir이 0이 아니면 마지막 이동 방향 저장
+        if self.player1.dir != 0:
+            self.player1.last_dir = self.player1.dir
+
         # ★ dir = 0이면 강제 IDLE (버그 방지)
         if self.player1.dir == 0:
             self.player1.state_machine.handle_state_event(('TIMEOUT', None))
@@ -288,10 +293,12 @@ class Jump:
         self.player1 = player1
         self.load_images()
         self.animation_finished = False
+        self.ground_y = 32
+        self.on_ground = False
 
         #점프 파워 설정
         self.PIXEL_PER_METER = 10.0 / 0.3  # 33.33 pixel = 1m
-        self.JUMP_POWER = 16.0  # 수직 초속 (m/s)
+        self.JUMP_POWER = 18.0 # 수직 초속 (m/s) - 16에서 22로 증가
         self.HORIZONTAL_BOOST = 6.0  # 수평 초속 (m/s)
         self.GRAVITY = 45.0  # 중력 (조금 세게 → 빠른 착지)
 
@@ -304,22 +311,25 @@ class Jump:
         self.ground_y = 50  # 착지 y 좌표
 
     def enter(self, e):
-        self.frame = 0.0  # ★ 프레임 초기화!
+        self.frame = 0.0  # 프레임 초기화!
         self.animation_finished = False
         self.player1.obstacle_hit = False
-
-        # 현재 위치가 땅 위인지 확인 (착지 후 재점프 방지)
-        if self.player1.y <= self.ground_y + 5:  # 약간의 여유
-            self.player1.y = self.ground_y
-
-            # 수직 속도
+        # 낙하(RUN_OFF)인지 실제 점프(space_down)인지 구분
+        if e[0] == 'RUN_OFF':
+            # 낙하는 초기 상승 속도 없이 시작
+            self.yv = 0
+            # 수평 관성 유지
+            self.xv = 0
+        else:
+            # 점프 시작 - ground_y에 위치 고정하고 수직 속도 부여
+            self.player1.y = self.player1.ground_y
             self.yv = self.JUMP_POWER * self.PIXEL_PER_METER
 
-            # 수평 속도 (현재 방향 유지)
-            run_speed = 20.0  # Run 클래스와 동일하게
+            # 수평 속도 설정
+            run_speed = 20.0
             pps = (run_speed * 1000 / 60 / 60) * self.PIXEL_PER_METER
             if self.player1.dir != 0:
-                self.xv = pps * self.player1.dir  # 달리는 중이면 더 빠르게
+                self.xv = pps * self.player1.dir
             else:
                 self.xv = self.HORIZONTAL_BOOST * self.PIXEL_PER_METER * self.player1.face_dir
 
@@ -328,26 +338,21 @@ class Jump:
 
     def do(self):
         self.frame += self.FRAMES_PER_ACTION * self.ACTION_PER_TIME * game_framework.frame_time
-
-        # 위치 업데이트
         self.player1.x += self.xv * game_framework.frame_time
         self.player1.y += self.yv * game_framework.frame_time
         self.yv -= self.GRAVITY * self.PIXEL_PER_METER * game_framework.frame_time
 
-        # 바닥 충돌 처리
-        if self.player1.y <= self.ground_y:
-            self.player1.y = self.ground_y
-            self.yv = 0  # 속도 완전 초기화
-            self.xv *= 0.7  # 착지 시 관성 감소 (미끄러짐 효과)
+        # 상승 종료(하강 시작) 즉시 Fall로 전이
+        if self.yv <= 0:
+            # 수평/수직 속도 전달
+            self.player1.air_xv = self.xv
+            self.player1.air_yv = self.yv
+            self.player1.state_machine.handle_state_event(('FALL_START', None))
+            return
 
-            # 착지 후 바로 Idle로 강제 전이
-            self.player1.state_machine.handle_state_event(('TIMEOUT', None))
-
-        # 애니메이션 끝나면 강제 종료
         if self.frame >= 6.5:
             self.player1.state_machine.handle_state_event(('TIMEOUT', None))
 
-        # 화면 경계
         self.player1.x = clamp(10, self.player1.x, 800 - 10)
 
     def draw(self):
@@ -366,9 +371,83 @@ class Jump:
         else:
             return self.player1.x - 15, self.player1.y - 17, self.player1.x + 10, self.player1.y + 17
 
+class Fall:
+    images = None
+
+    def load_images(self):
+        if Fall.images is None:
+            Fall.images = {}
+            Fall.images['fall'] = [load_image(f"./player_1/fall ({i}).png") for i in range(1, 5)]
+    # 떨어지는 상태 ->
+    def __init__(self, player1):
+        self.frame = 0.0
+        self.player1 = player1
+        self.load_images()
+        self.animation_finished = False
+        self.PIXEL_PER_METER = 10.0 / 0.3
+        self.GRAVITY = 45.0
+        self.TIME_PER_ACTION = 1.0
+        self.ACTION_PER_TIME = 1.0 / self.TIME_PER_ACTION
+        self.FRAMES_PER_ACTION = 4
+
+        self.xv = 0.0
+        self.yv = 0.0
+
+    def enter(self, e):
+        self.frame = 0.0
+        self.animation_finished = False
+        # Jump에서 넘어온 경우 저장된 air 속도 사용
+        if e[0] == 'FALL_START':
+            self.xv = getattr(self.player1, 'air_xv', 0.0)
+            self.yv = getattr(self.player1, 'air_yv', 0.0)
+        elif e[0] == 'RUN_OFF':
+            # 달리다가 떨어지는 경우 - 수평 속도 유지
+            run_speed = 20.0
+            pps = (run_speed * 1000 / 60 / 60) * self.PIXEL_PER_METER
+            # dir이 0이면 last_dir 사용 (키를 뗀 직후 떨어지는 경우)
+            direction = self.player1.dir if self.player1.dir != 0 else self.player1.last_dir
+            self.xv = pps * direction
+            self.yv = 0.0  # 초기 낙하 속도는 0
+        else:
+            self.xv = 0.0
+            self.yv = 0.0
+
+    def exit(self, e):
+        pass
+
+    def do(self):
+        self.frame += self.FRAMES_PER_ACTION * self.ACTION_PER_TIME * game_framework.frame_time
+        self.player1.x += self.xv * game_framework.frame_time
+        self.player1.y += self.yv * game_framework.frame_time
+        self.yv -= self.GRAVITY * self.PIXEL_PER_METER * game_framework.frame_time
+
+        # 애니메이션 끝나도 낙하는 유지 -> 착지로만 종료, 프레임 루프만 유지
+        if self.frame >= self.FRAMES_PER_ACTION - 0.5:
+            self.frame = 0.0
+
+        self.player1.x = clamp(10, self.player1.x, 800 - 10)
+
+    def draw(self):
+        frame_idx = int(self.frame) % self.FRAMES_PER_ACTION
+        img = Fall.images['fall'][frame_idx]
+
+        if self.player1.face_dir == 1:
+            img.draw(self.player1.x, self.player1.y)
+        else:
+            img.composite_draw(0, 'h', self.player1.x, self.player1.y)
+        draw_rectangle(*self.get_bb())
+
+    def get_bb(self):
+        if self.player1.face_dir == 1:
+            return self.player1.x - 10, self.player1.y - 17, self.player1.x + 15, self.player1.y + 17
+        else:
+            return self.player1.x - 15, self.player1.y - 17, self.player1.x + 10, self.player1.y + 17
+
+
 class Player1:
+    BASE_GROUND_Y = 32
     def __init__(self):
-        self.x, self.y = 100, 50
+        self.x, self.y = 100, 49  # 바닥(32) + 발 오프셋(17) = 49
         self.face_dir = 1
         self.dir = 0
         #플레이어 체력
@@ -376,6 +455,7 @@ class Player1:
 
         self.attack_hit = False
         self.obstacle_hit = False
+        self.ground_y = 32  # 기본 바닥 높이를 BASE_GROUND_Y와 동일하게
 
         # 플레이어 상태 관리 (먼저 생성해서 이미지 로드)
         self.APPEARANCE = Appearance(self)
@@ -383,24 +463,87 @@ class Player1:
         self.RUN = Run(self)
         self.ATTACK = Attack(self)
         self.JUMP = Jump(self)
+        self.FALL = Fall(self)
 
         self.state_machine = StateMachine(
             self.APPEARANCE,
             {
                 self.APPEARANCE : {time_out: self.IDLE},
-                self.IDLE : {space_down: self.JUMP,
-                             right_down: self.RUN, left_down: self.RUN,
-                             g_down: self.ATTACK},
-                self.RUN : {space_down: self.JUMP,
-                            right_up: self.IDLE, left_up: self.IDLE, right_down: self.RUN, left_down: self.RUN,
-                            g_down: self.ATTACK},
-                self.ATTACK : {time_out: self.IDLE},
-                self.JUMP : {time_out: self.IDLE}
+                self.IDLE : {space_down: self.JUMP, right_down: self.RUN, left_down: self.RUN, g_down: self.ATTACK, run_off: self.FALL},
+                self.RUN : {space_down: self.JUMP, right_up: self.IDLE, left_up: self.IDLE, right_down: self.RUN, left_down: self.RUN, g_down: self.ATTACK, run_off: self.FALL},
+                self.ATTACK : {time_out: self.IDLE, run_off: self.FALL},
+                self.JUMP : {fall_start: self.FALL, time_out: self.IDLE},
+                self.FALL : {time_out: self.IDLE}
             }
         )
 
     def update(self):
         self.state_machine.update()
+        cur = getattr(self.state_machine, 'cur_state', None)
+        # 공중 상태(점프/낙하) 착지 처리
+        if isinstance(cur, (Jump, Fall)):
+            support = None
+            if hasattr(cur, 'yv') and cur.yv <= 0:
+                support = self._find_support_block()
+            if support:
+                top = support.get_bb()[3]
+                foot_y = self.get_bb()[1]
+                if foot_y <= top + 10 and foot_y >= top - 3:
+                    self.ground_y = top
+                    self.y = top + 17
+                    if hasattr(cur, 'yv'):
+                        cur.yv = 0
+                    self.state_machine.handle_state_event(('TIMEOUT', None))
+            # 공중이면 다른 지면 상태 로직 스킵
+            return
+
+        # 지상 상태 지지 블록 검사
+        support = self._find_support_block()
+        if support:
+            top = support.get_bb()[3]
+            self.ground_y = top
+            if self.y < top + 17:
+                self.y = top + 17
+        else:
+            if self.ground_y > self.BASE_GROUND_Y:
+                self.ground_y = self.BASE_GROUND_Y
+                self.state_machine.handle_state_event(('RUN_OFF', None))
+            elif self.y < self.BASE_GROUND_Y + 17:
+                self.y = self.BASE_GROUND_Y + 17
+                self.ground_y = self.BASE_GROUND_Y
+
+    def _find_support_block(self):
+        # 플레이어 발 위치 - 중앙 부분만 체크 (가장자리에서 떨어지기 쉽게)
+        left, bottom, right, top = self.get_bb()
+        foot_y = bottom
+
+        # 발의 중앙 30%만 체크 (양 끝 35%씩 제외) - 더 좁게 체크하여 떨어지기 쉽게
+        foot_width = (right - left)
+        margin = foot_width * 0.35
+        check_left = left + margin
+        check_right = right - margin
+
+        nearest = None
+        nearest_top = -9999
+
+        # world 레이어 순회
+        for layer in game_world.world:
+            for o in layer:
+                if isinstance(o, StageBlock):
+                    l, b, r, t = o.get_bb()
+
+                    # 발의 중앙 부분이 블록 범위와 겹치는지 확인
+                    horizontal_overlap = not (check_right < l or check_left > r)
+
+                    # 발이 블록 윗면 근처에 있는지 확인
+                    vertical_near = foot_y <= t + 10 and foot_y >= t - 5
+
+                    if horizontal_overlap and vertical_near:
+                        # 가장 높은 것 선택 (겹칠 경우)
+                        if t > nearest_top:
+                            nearest = o
+                            nearest_top = t
+        return nearest
 
     def handle_event(self, event):
         self.state_machine.handle_state_event(('INPUT', event))
@@ -434,7 +577,7 @@ class Player1:
         def _get_attack_bb(src):
             return getattr(src, 'get_attack_bb', lambda: None)()
 
-        # 칼 맞음 처리
+        # 공격 처리
         if group.startswith('sword:'):
             atk_bb = _get_attack_bb(other)
             if not atk_bb or getattr(other, 'attack_hit', False):
@@ -457,4 +600,23 @@ class Player1:
             other.obstacle_hit = True
             print("Player1 hit by obstacle! HP:", self.hp)
             game_world.remove_object(other)
+            return
+
+        # 스테이지 블록 충돌 처리
+        if group.endswith(':stageBlock'):
+            block_bb = other.get_bb()
+            player_bb = self.get_bb()
+            # 블록 윗면 위치
+            block_top = block_bb[3]
+            # 착지 조건: 플레이어 발이 블록 윗면 근처이고 플레이어가 블록 위쪽에서 내려오는 중
+            foot_y = player_bb[1]
+            cur_state = self.state_machine.cur_state
+            descending = hasattr(cur_state, 'yv') and cur_state.yv <= 0
+            if foot_y >= block_top - 8 and self.y >= block_top and descending:
+                # 착지 처리
+                self.ground_y = block_top
+                self.y = block_top + (player_bb[3] - player_bb[1]) / 2
+                if hasattr(cur_state, 'yv'):
+                    cur_state.yv = 0
+                return
             return

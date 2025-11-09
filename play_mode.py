@@ -26,8 +26,10 @@ def handle_events():
         elif event.type == SDL_KEYDOWN and event.key == SDLK_ESCAPE:
             game_framework.change_mode(title_mode)
         else:
-            player1.handle_event(event)
-            player2.handle_event(event)
+            if player1:
+                player1.handle_event(event)
+            if player2:
+                player2.handle_event(event)
 
 def init():
     # 스테이지 배경
@@ -37,6 +39,7 @@ def init():
     # 스테이지 블록들
     # 가로로 10개 배치, 시작 x는 화면 좌측(예: 100), 간격은 32
     start_x, start_y, gap = 16, 16, 32
+
     blocks = [
         [StageBlock(start_x + i * gap, start_y) for i in range(25)],
         [StageBlock(start_x + 84 + 64 + i * gap, start_y + 80) for i in range(5)],
@@ -45,7 +48,11 @@ def init():
         [StageBlock(start_x + 684 - 64 - i * gap, start_y + 240) for i in range(5)],
         [StageBlock(start_x + 400 - 80 + i * gap, start_y + 160) for i in range(5)]
     ]
+
+    # 모든 블록을 하나의 리스트로 만듬
+    all_blocks = []
     for b in blocks:
+        all_blocks.extend(b)
         game_world.add_objects(b, 1)
 
     # 떨어지는 장애물들
@@ -73,12 +80,23 @@ def init():
     # ---------- 충돌 페어 등록 ----------
     game_world.add_collision_pair('sword:player2', None,None)
     game_world.add_collision_pair('sword:player1', None,None)
+
+    # 장애물 충돌
     game_world.add_collision_pair('obstacle:player1', None, None)
     for obs in obstacles:
         game_world.add_collision_pair('obstacle:player1', obs, player1)
     game_world.add_collision_pair('obstacle:player2', None, None)
     for obs in obstacles:
         game_world.add_collision_pair('obstacle:player2', obs, player2)
+
+    # 스테이지 블록 충돌 (점프 착지용)
+    game_world.add_collision_pair('player1:stageBlock', None, None)
+    for block in all_blocks:
+        game_world.add_collision_pair('player1:stageBlock', player1, block)
+
+    game_world.add_collision_pair('player2:stageBlock', None, None)
+    for block in all_blocks:
+        game_world.add_collision_pair('player2:stageBlock', player2, block)
 
     # ---------- 체력 UI (플레이어를 따라다님) ----------
     global hp_player1, hp_player2
@@ -104,7 +122,7 @@ def update():
         hp.x = player2.x + 32 - i * 15
         hp.y = player2.y + 30
 
-    # ★ HP에 따라 하트 UI 제거
+    # HP에 따라 하트 UI 제거
     # Player1 HP에 따라 하트 제거
     if len(hp_player1) > player1.hp:
         for _ in range(len(hp_player1) - player1.hp):
