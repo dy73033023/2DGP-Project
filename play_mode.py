@@ -14,9 +14,14 @@ from player1 import Player1
 from player2 import Player2
 
 player1 = player2 = None
-obstacles = None
+obstacles = []
 hp_player1 = hp_player2 = None  # 리스트 아님! game_world에 들어간 객체들 자체
 game_over_triggered = False
+
+# 장애물 스폰 관련 변수
+OBSTACLE_SPAWN_DELAY = 10.0  # 초
+obstacle_spawned = False
+obstacle_spawn_timer = 0.0
 
 def handle_events():
     event_list = get_events()
@@ -56,10 +61,10 @@ def init():
         game_world.add_objects(b, 1)
 
     # 떨어지는 장애물들
-    # 시작 위치 - x는 랜덤 y 600 이상
-    global obstacles
-    obstacles = [Obstacle(random.randint(0, 800),random.randint(600, 1200)) for _ in range(40)]
-    game_world.add_objects(obstacles, 1)
+    global obstacles, obstacle_spawned, obstacle_spawn_timer
+    obstacles = None
+    obstacle_spawned = False
+    obstacle_spawn_timer = 0.0
 
    # ------------------ 플레이어 관련 ------------------
 
@@ -81,19 +86,7 @@ def init():
     game_world.add_collision_pair('sword:player2', None,None)
     game_world.add_collision_pair('sword:player1', None,None)
     game_world.add_collision_pair('obstacle:player1', None, None)
-    for obs in obstacles:
-        game_world.add_collision_pair('obstacle:player1', obs, player1)
-    game_world.add_collision_pair('obstacle:player2', None, None)
-    for obs in obstacles:
-        game_world.add_collision_pair('obstacle:player2', obs, player2)
 
-    # 장애물 충돌
-    game_world.add_collision_pair('obstacle:player1', None, None)
-    for obs in obstacles:
-        game_world.add_collision_pair('obstacle:player1', obs, player1)
-    game_world.add_collision_pair('obstacle:player2', None, None)
-    for obs in obstacles:
-        game_world.add_collision_pair('obstacle:player2', obs, player2)
 
     # 스테이지 블록 충돌 (점프 착지용)
     game_world.add_collision_pair('player1:stageBlock', None, None)
@@ -117,7 +110,27 @@ def init():
 
 
 def update():
-    global game_over_triggered
+    global game_over_triggered, obstacles, obstacle_spawned, obstacle_spawn_timer
+
+    # 장애물 스폰 타이머 처리 (스폰되면 한 번만 수행)
+    if not obstacle_spawned:
+        obstacle_spawn_timer += game_framework.frame_time
+        if obstacle_spawn_timer >= OBSTACLE_SPAWN_DELAY:
+            # 장애물 생성 및 월드 추가
+            obstacles = [Obstacle(random.randint(0, 800), random.randint(600, 1200)) for _ in range(40)]
+            game_world.add_objects(obstacles, 1)
+
+            # 장애물-플레이어 충돌 페어 등록
+            game_world.add_collision_pair('obstacle:player1', None, None)
+            for obs in obstacles:
+                game_world.add_collision_pair('obstacle:player1', obs, player1)
+
+            game_world.add_collision_pair('obstacle:player2', None, None)
+            for obs in obstacles:
+                game_world.add_collision_pair('obstacle:player2', obs, player2)
+
+            obstacle_spawned = True
+
     game_world.update()
     game_world.handle_collision()
 
