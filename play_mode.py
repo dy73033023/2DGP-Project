@@ -4,6 +4,7 @@ from pico2d import *
 import game_framework
 import game_world
 import title_mode
+import game_over_mode
 
 from background import Background
 from stageBlock import StageBlock
@@ -13,10 +14,9 @@ from player1 import Player1
 from player2 import Player2
 
 player1 = player2 = None
-stageBlocks = stageBlocks2 = stageBlocks3 = stageBlocks4 = None
 obstacles = None
 hp_player1 = hp_player2 = None  # 리스트 아님! game_world에 들어간 객체들 자체
-
+game_over_triggered = False
 
 def handle_events():
     event_list = get_events()
@@ -117,6 +117,7 @@ def init():
 
 
 def update():
+    global game_over_triggered
     game_world.update()
     game_world.handle_collision()
 
@@ -142,6 +143,21 @@ def update():
             if hp_player2:
                 removed = hp_player2.pop()
                 game_world.remove_object(removed)
+
+    # 게임 오버 처리
+    if not game_over_triggered:
+        if player1 and player1.hp <= 0:
+            # player1 사망 -> player2 승리
+            game_world.game_result = 'PLAYER2'
+            game_over_triggered = True
+            game_framework.change_mode(game_over_mode)
+            return
+        if player2 and player2.hp <= 0:
+            # player2 사망 -> player1 승리
+            game_world.game_result = 'PLAYER1'
+            game_over_triggered = True
+            game_framework.change_mode(game_over_mode)
+            return
 
 def draw():
     clear_canvas()
