@@ -16,9 +16,14 @@ def init():
     font_small = load_font('megaman.ttf', 20)
 
 def finish():
-    global font, font_small
-    del font
-    del font_small
+    global image, font, font_small
+    # 메모리 정리: image도 삭제
+    if image is not None:
+        del image
+    if font is not None:
+        del font
+    if font_small is not None:
+        del font_small
 
 def handle_events():
     event_list = get_events()
@@ -34,13 +39,17 @@ def handle_events():
 
 def draw():
     clear_canvas()
-    image.draw(400, 300)
+    if image:
+        image.draw(400, 300)
+
     # 결과 가져오기
     result = getattr(game_world, 'game_result', None)
     if result == 'PLAYER1':
         message = 'Player 1 Wins!'
     elif result == 'PLAYER2':
         message = 'Player 2 Wins!'
+    elif result == 'DRAW':
+        message = 'DRAW'
     else:
         message = '게임 종료'
 
