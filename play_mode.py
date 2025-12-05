@@ -24,7 +24,7 @@ obstacle_spawned = False
 obstacle_spawn_timer = 0.0
 
 font_timer = None
-START_TIME = 60.0
+START_TIME = 120.0
 time_left = START_TIME
 
 def handle_events():
