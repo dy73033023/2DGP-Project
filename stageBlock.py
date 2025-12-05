@@ -25,6 +25,10 @@ class StageBlock:
         self.width, self.length = 32, 32
         self.bb_x, self.bb_y = 32, 32
 
+        self.bgm = load_music('bgm.mp3')
+        self.bgm.set_volume(100)
+        self.bgm.repeat_play()
+
     def update(self):
         self.frame = (self.frame + FRAMES_PER_ACTION * ACTION_PER_TIME * game_framework.frame_time) % FRAMES_PER_ACTION
 
