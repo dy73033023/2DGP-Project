@@ -23,6 +23,10 @@ OBSTACLE_SPAWN_DELAY = 10.0  # 초
 obstacle_spawned = False
 obstacle_spawn_timer = 0.0
 
+font_timer = None
+START_TIME = 60.0
+time_left = START_TIME
+
 def handle_events():
     event_list = get_events()
     for event in event_list:
@@ -37,12 +41,26 @@ def handle_events():
                 player2.handle_event(event)
 
 def init():
+    global game_over_triggered, time_left, font_timer
+    global obstacles, obstacle_spawned, obstacle_spawn_timer
+    global player1, player2, hp_player1, hp_player2
+
+
+
+    game_over_triggered = False
+    time_left = START_TIME
+    obstacle_spawned = False
+    obstacle_spawn_timer = 0.0
+    obstacles = []
+
+    # 폰트 로드
+    font_timer = load_font('megaman.ttf', 30)
+
     # 스테이지 배경
     background = Background()
     game_world.add_object(background, 0)
 
     # 스테이지 블록들
-    # 가로로 10개 배치, 시작 x는 화면 좌측(예: 100), 간격은 32
     start_x, start_y, gap = 16, 16, 32
 
     blocks = [
@@ -60,21 +78,11 @@ def init():
         all_blocks.extend(b)
         game_world.add_objects(b, 1)
 
-    # 떨어지는 장애물들
-    global obstacles, obstacle_spawned, obstacle_spawn_timer
-    obstacles = None
-    obstacle_spawned = False
-    obstacle_spawn_timer = 0.0
-
-   # ------------------ 플레이어 관련 ------------------
-
     # 플레이어 1 - 왼쪽에서 시작
-    global player1
     player1 = Player1()
     game_world.add_object(player1, 1)
 
     # 플레이어 2 - 오른쪽에서 시작
-    global player2
     player2 = Player2()
     game_world.add_object(player2, 1)
 
@@ -83,10 +91,8 @@ def init():
     player2.attack_target = player1
 
     # ---------- 충돌 페어 등록 ----------
-    game_world.add_collision_pair('sword:player2', None,None)
-    game_world.add_collision_pair('sword:player1', None,None)
-    game_world.add_collision_pair('obstacle:player1', None, None)
-
+    game_world.add_collision_pair('sword:player2', None, None)
+    game_world.add_collision_pair('sword:player1', None, None)
 
     # 스테이지 블록 충돌 (점프 착지용)
     game_world.add_collision_pair('player1:stageBlock', None, None)
@@ -98,19 +104,31 @@ def init():
         game_world.add_collision_pair('player2:stageBlock', player2, block)
 
     # ---------- 체력 UI (플레이어를 따라다님) ----------
-    global hp_player1, hp_player2
-
-    # Player1: 왼쪽부터 (index 0~4)
     hp_player1 = [Hp(player1.x - 32 + i * 15, player1.y + 50) for i in range(5)]
     game_world.add_objects(hp_player1, 3)
 
-    # Player2: 오른쪽부터 (index 0~4)
     hp_player2 = [Hp(player2.x + 32 - i * 15, player2.y + 50) for i in range(5)]
     game_world.add_objects(hp_player2, 3)
 
-
 def update():
     global game_over_triggered, obstacles, obstacle_spawned, obstacle_spawn_timer
+    global time_left
+
+    # 타이머
+    time_left = max(0.0, time_left - game_framework.frame_time)
+    if time_left <= 0 and not game_over_triggered:
+        # 남은 HP 비교로 승자 결정 (동률이면 DRAW)
+        p1_hp = getattr(player1, 'hp', 0)
+        p2_hp = getattr(player2, 'hp', 0)
+        if p1_hp > p2_hp:
+            game_world.game_result = 'PLAYER1'
+        elif p2_hp > p1_hp:
+            game_world.game_result = 'PLAYER2'
+        else:
+            game_world.game_result = 'DRAW'
+        game_over_triggered = True
+        game_framework.change_mode(game_over_mode)
+        return
 
     # 장애물 스폰 타이머 처리 (스폰되면 한 번만 수행)
     if not obstacle_spawned:
@@ -175,6 +193,7 @@ def update():
 def draw():
     clear_canvas()
     game_world.render()
+    font_timer.draw(720, 560, f'{int(time_left)}', (255, 255, 255))
     update_canvas()
 
 
