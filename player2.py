@@ -1,10 +1,15 @@
-from pico2d import load_image, draw_rectangle, clamp
+from pico2d import load_image, draw_rectangle, clamp, load_font
 from sdl2 import SDL_KEYDOWN, SDL_KEYUP, SDLK_KP_0, SDLK_KP_ENTER, SDLK_RIGHT, SDLK_LEFT
 
 import game_world
 import game_framework
 from state_machine import StateMachine
 from stageBlock import StageBlock
+
+# 공통 상수: 단위/속도 계산 통일
+PIXEL_PER_METER = 10.0 / 0.3
+RUN_SPEED_KMPH = 20.0
+RUN_SPEED_PPS = (RUN_SPEED_KMPH * 1000.0 / 3600.0) * PIXEL_PER_METER
 
 
 time_out = lambda e: e[0] == 'TIMEOUT'
@@ -139,12 +144,8 @@ class Run:
         self.player2 = player2
         self.load_images()
 
-        # player의 Run Speed 계산
-        self.PIXEL_PER_METER = (10.0 / 0.3)  # 10 pixel 30 cm
-        self.RUN_SPEED_KMPH = 20.0  # Km / Hour
-        self.RUN_SPEED_MPM = (self.RUN_SPEED_KMPH * 1000.0 / 60.0)
-        self.RUN_SPEED_MPS = (self.RUN_SPEED_MPM / 60.0)
-        self.RUN_SPEED_PPS = (self.RUN_SPEED_MPS * self.PIXEL_PER_METER)
+        # 모듈 상수를 재사용
+        self.RUN_SPEED_PPS = RUN_SPEED_PPS
 
         self.TIME_PER_ACTION = 0.5
         self.ACTION_PER_TIME = 1.0 / self.TIME_PER_ACTION
@@ -171,17 +172,15 @@ class Run:
         self.frame += self.FRAMES_PER_ACTION * self.ACTION_PER_TIME * game_framework.frame_time
         self.player2.x += self.player2.dir * self.RUN_SPEED_PPS * game_framework.frame_time
 
-        # dir이 0이 아니면 마지막 이동 방향 저장
+        # dir이 0이 아니면 마지막 이동 방향 저장 및 idle_delay 리셋
         if self.player2.dir != 0:
             self.player2.last_dir = self.player2.dir
-
-        # ★ dir = 0이면 강제 IDLE (버그 방지)
-        if self.player2.dir == 0:
-            self.player2.state_machine.handle_state_event(('TIMEOUT', None))
-            if self.idle_delay > 0.1:  # 0.1초 대기
-                self.player2.state_machine.handle_state_event(('TIMEOUT', None))
-        else:
             self.idle_delay = 0
+        else:
+            # dir == 0이면 일정 시간 후에 TIMEOUT 전이 (중복 호출 제거)
+            self.idle_delay += game_framework.frame_time
+            if self.idle_delay > 0.1:
+                self.player2.state_machine.handle_state_event(('TIMEOUT', None))
 
         self.player2.x = clamp(10, self.player2.x, 800 - 10)
 
@@ -216,13 +215,6 @@ class Attack:
         self.player2 = player2
         self.load_images()
         self.animation_finished = False
-
-        # player의 Run Speed 계산
-        self.PIXEL_PER_METER = (10.0 / 0.3)  # 10 pixel 30 cm
-        self.RUN_SPEED_KMPH = 20.0  # Km / Hour
-        self.RUN_SPEED_MPM = (self.RUN_SPEED_KMPH * 1000.0 / 60.0)
-        self.RUN_SPEED_MPS = (self.RUN_SPEED_MPM / 60.0)
-        self.RUN_SPEED_PPS = (self.RUN_SPEED_MPS * self.PIXEL_PER_METER)
 
         self.TIME_PER_ACTION = 0.5
         self.ACTION_PER_TIME = 1.0 / self.TIME_PER_ACTION
@@ -316,42 +308,38 @@ class Jump:
         self.player2 = player2
         self.load_images()
         self.animation_finished = False
-        self.ground_y = 32  # 기본 바닥
+        self.ground_y = 32
         self.on_ground = False
 
-        #점프 파워 설정
-        self.PIXEL_PER_METER = 10.0 / 0.3  # 33.33 pixel = 1m
-        self.JUMP_POWER = 18.0  # 수직 초속 (m/s) - 16에서 22로 증가
-        self.HORIZONTAL_BOOST = 6.0  # 수평 초속 (m/s)
-        self.GRAVITY = 45.0  # 중력 (조금 세게 → 빠른 착지)
+        # 파일 상수 사용
+        self.PIXEL_PER_METER = PIXEL_PER_METER
+        self.JUMP_POWER = 18.0
+        self.HORIZONTAL_BOOST = 6.0
+        self.GRAVITY = 45.0
 
         self.TIME_PER_ACTION = 1.0
         self.ACTION_PER_TIME = 1.0 / self.TIME_PER_ACTION
         self.FRAMES_PER_ACTION = 7
 
-        self.xv = 0.0  # m/s
-        self.yv = 0.0  # m/s
-        self.ground_y = 50  # 착지 y 좌표
+        self.xv = 0.0
+        self.yv = 0.0
+        self.ground_y = 50
 
     def enter(self, e):
         self.frame = 0.0
         self.animation_finished = False
         self.player2.obstacle_hit = False
         if e[0] == 'RUN_OFF':
-            # 낙하: 상승 속도 없이 시작, 기존 수평 속도 유지하지 않음
             self.yv = 0
             self.xv = 0
         else:
-            # 점프 시작 - ground_y에 위치 고정하고 수직 속도 부여
             self.player2.y = self.player2.ground_y
-            # 수직 속도
             self.yv = self.JUMP_POWER * self.PIXEL_PER_METER
 
-            # 수평 속도 (현재 방향 유지)
-            run_speed = 20.0  # Run 클래스와 동일하게
-            pps = (run_speed * 1000 / 60 / 60) * self.PIXEL_PER_METER
+            # 달리기 속도는 파일 상수 사용
+            pps = RUN_SPEED_PPS
             if self.player2.dir != 0:
-                self.xv = pps * self.player2.dir  # 달리는 중이면 더 빠르게
+                self.xv = pps * self.player2.dir
             else:
                 self.xv = self.HORIZONTAL_BOOST * self.PIXEL_PER_METER * self.player2.face_dir
 
@@ -405,7 +393,7 @@ class Fall:
         self.player2 = player2
         self.load_images()
         self.animation_finished = False
-        self.PIXEL_PER_METER = 10.0 / 0.3
+        self.PIXEL_PER_METER = PIXEL_PER_METER
         self.GRAVITY = 45.0
         self.TIME_PER_ACTION = 1.0
         self.ACTION_PER_TIME = 1.0 / self.TIME_PER_ACTION
@@ -422,12 +410,9 @@ class Fall:
             self.yv = getattr(self.player2, 'air_yv', 0.0)
         elif e[0] == 'RUN_OFF':
             # 달리다가 떨어지는 경우 - 수평 속도 유지
-            run_speed = 20.0
-            pps = (run_speed * 1000 / 60 / 60) * self.PIXEL_PER_METER
-            # dir이 0이면 last_dir 사용 (키를 뗀 직후 떨어지는 경우)
             direction = self.player2.dir if self.player2.dir != 0 else self.player2.last_dir
-            self.xv = pps * direction
-            self.yv = 0.0  # 초기 낙하 속도는 0
+            self.xv = RUN_SPEED_PPS * direction
+            self.yv = 0.0
         else:
             self.xv = 0.0
             self.yv = 0.0
@@ -465,6 +450,7 @@ class Fall:
 
 class Player2:
     BASE_GROUND_Y = 32
+    font = None
 
     def __init__(self):
         self.x, self.y = 700, 49  # 바닥(32) + 발 오프셋(17) = 49
@@ -502,6 +488,10 @@ class Player2:
                 self.FALL : {time_out: self.IDLE}
             }
         )
+
+        # 폰트 로드 (클래스 변수로 한 번만)
+        if Player2.font is None:
+            Player2.font = load_font('megaman.ttf', 10)
 
     def update(self):
         self.state_machine.update()
@@ -574,6 +564,9 @@ class Player2:
 
     def draw(self):
         self.state_machine.draw()
+        # 플레이어 위에 "P2" 표시
+        if Player2.font:
+            Player2.font.draw(self.x - 10, self.y + 50, 'P2', (255, 255, 255))
 
     def get_bb(self):
         # 현재 상태의 바운딩 박스를 안전하게 반환 (없으면 임시 박스)
