@@ -1,4 +1,4 @@
-from pico2d import load_image, draw_rectangle, clamp, load_font
+from pico2d import load_image, clamp, load_font
 from sdl2 import SDL_KEYDOWN, SDL_KEYUP, SDLK_KP_0, SDLK_KP_ENTER, SDLK_RIGHT, SDLK_LEFT
 
 import game_world
@@ -122,7 +122,6 @@ class Idle:
             img.draw(self.player2.x, self.player2.y)
         else:
             img.composite_draw(0, 'h', self.player2.x, self.player2.y)
-        draw_rectangle(*self.get_bb())
 
     def get_bb(self):
         if self.player2.face_dir == 1:
@@ -192,7 +191,6 @@ class Run:
             img.draw(self.player2.x, self.player2.y)
         else:
             img.composite_draw(0, 'h', self.player2.x, self.player2.y)
-        draw_rectangle(*self.get_bb())
 
     def get_bb(self):
         if self.player2.face_dir == 1:
@@ -252,10 +250,6 @@ class Attack:
             img.draw(self.player2.x, self.player2.y)
         else:
             img.composite_draw(0, 'h', self.player2.x, self.player2.y)
-        draw_rectangle(*self.get_bb())
-        atk_bb = self.get_attack_bb()
-        if atk_bb:
-            draw_rectangle(*atk_bb)
 
     def get_bb(self):
         if self.player2.face_dir == 1:
@@ -371,7 +365,6 @@ class Jump:
             img.draw(self.player2.x, self.player2.y)
         else:
             img.composite_draw(0, 'h', self.player2.x, self.player2.y)  # ★ 뒤집기만!!
-        draw_rectangle(*self.get_bb())
 
     def get_bb(self):
         if self.player2.face_dir == 1:
@@ -438,7 +431,6 @@ class Fall:
             img.draw(self.player2.x, self.player2.y)
         else:
             img.composite_draw(0, 'h', self.player2.x, self.player2.y)
-        draw_rectangle(*self.get_bb())
 
     def get_bb(self):
         if self.player2.face_dir == 1:

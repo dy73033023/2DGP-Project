@@ -1,4 +1,4 @@
-from pico2d import load_image, draw_rectangle, clamp, load_font
+from pico2d import load_image, clamp, load_font
 from sdl2 import SDL_KEYDOWN, SDL_KEYUP, SDLK_SPACE, SDLK_g, SDLK_d, SDLK_a
 
 import game_world
@@ -122,7 +122,6 @@ class Idle:
             img.draw(self.player1.x, self.player1.y)
         else:
             img.composite_draw(0, 'h', self.player1.x, self.player1.y)
-        draw_rectangle(*self.get_bb())
 
     def get_bb(self):
         if self.player1.face_dir == 1:
@@ -190,7 +189,6 @@ class Run:
             img.draw(self.player1.x, self.player1.y)
         else:
             img.composite_draw(0, 'h', self.player1.x, self.player1.y)
-        draw_rectangle(*self.get_bb())
 
     def get_bb(self):
         if self.player1.face_dir == 1:
@@ -251,11 +249,6 @@ class Attack:
             img.draw(self.player1.x, self.player1.y)
         else:
             img.composite_draw(0, 'h', self.player1.x, self.player1.y)  # ★ 뒤집기만!!
-        draw_rectangle(*self.get_bb())
-
-        atk_bb = self.get_attack_bb()
-        if atk_bb:
-            draw_rectangle(*atk_bb)
 
     def get_bb(self):
         if self.player1.face_dir == 1:
@@ -350,7 +343,6 @@ class Jump:
             img.draw(self.player1.x, self.player1.y)
         else:
             img.composite_draw(0, 'h', self.player1.x, self.player1.y)  # ★ 뒤집기만!!
-        draw_rectangle(*self.get_bb())
 
     def get_bb(self):
         if self.player1.face_dir == 1:
@@ -418,7 +410,6 @@ class Fall:
             img.draw(self.player1.x, self.player1.y)
         else:
             img.composite_draw(0, 'h', self.player1.x, self.player1.y)
-        draw_rectangle(*self.get_bb())
 
     def get_bb(self):
         if self.player1.face_dir == 1:
@@ -432,21 +423,15 @@ class Player1:
     font = None
 
     def __init__(self):
-        self.x, self.y = 100, 49  # 바닥(32) + 발 오프셋(17) = 49
+        self.x, self.y = 100, 49
         self.face_dir = 1
         self.dir = 0
-        #플레이어 체력
+        self.last_dir = 0
         self.hp = 5
-
         self.attack_hit = False
         self.obstacle_hit = False
-        self.ground_y = 32  # 기본 바닥 높이를 BASE_GROUND_Y와 동일하게
+        self.ground_y = 32
 
-        # 폰트 로드 (클래스 변수로 한 번만)
-        if Player1.font is None:
-            Player1.font = load_font('megaman.ttf', 10)
-
-        # 플레이어 상태 관리 (먼저 생성해서 이미지 로드)
         self.APPEARANCE = Appearance(self)
         self.IDLE = Idle(self)
         self.RUN = Run(self)
@@ -457,19 +442,28 @@ class Player1:
         self.state_machine = StateMachine(
             self.APPEARANCE,
             {
-                self.APPEARANCE : {time_out: self.IDLE},
-                self.IDLE : {space_down: self.JUMP, right_down: self.RUN, left_down: self.RUN, g_down: self.ATTACK, run_off: self.FALL},
-                self.RUN : {space_down: self.JUMP, right_up: self.IDLE, left_up: self.IDLE, right_down: self.RUN, left_down: self.RUN, g_down: self.ATTACK, run_off: self.FALL},
-                self.ATTACK : {time_out: self.IDLE, run_off: self.FALL},
-                self.JUMP : {fall_start: self.FALL, time_out: self.IDLE},
-                self.FALL : {time_out: self.IDLE}
+                self.APPEARANCE: {time_out: self.IDLE},
+                self.IDLE: { space_down: self.JUMP,
+                             right_down: self.RUN, left_down: self.RUN,
+                             g_down: self.ATTACK,
+                             run_off: self.FALL},
+                self.RUN: { space_down: self.JUMP,
+                            right_up: self.IDLE, left_up: self.IDLE, right_down: self.RUN, left_down: self.RUN,
+                            g_down: self.ATTACK,
+                            run_off: self.FALL},
+                self.ATTACK: {time_out: self.IDLE, run_off: self.FALL},
+                self.JUMP: {fall_start: self.FALL, time_out: self.IDLE},
+                self.FALL: {time_out: self.IDLE}
             }
         )
 
+        if Player1.font is None:
+            Player1.font = load_font('megaman.ttf', 10)
+
     def update(self):
         self.state_machine.update()
+
         cur = getattr(self.state_machine, 'cur_state', None)
-        # 공중 상태(점프/낙하) 착지 처리
         if isinstance(cur, (Jump, Fall)):
             support = None
             if hasattr(cur, 'yv') and cur.yv <= 0:
@@ -483,10 +477,8 @@ class Player1:
                     if hasattr(cur, 'yv'):
                         cur.yv = 0
                     self.state_machine.handle_state_event(('TIMEOUT', None))
-            # 공중이면 다른 지면 상태 로직 스킵
             return
 
-        # 지상 상태 지지 블록 검사
         support = self._find_support_block()
         if support:
             top = support.get_bb()[3]
@@ -497,16 +489,13 @@ class Player1:
             if self.ground_y > self.BASE_GROUND_Y:
                 self.ground_y = self.BASE_GROUND_Y
                 self.state_machine.handle_state_event(('RUN_OFF', None))
-            elif self.y < self.BASE_GROUND_Y + 17:
+            if self.y < self.BASE_GROUND_Y + 17:
                 self.y = self.BASE_GROUND_Y + 17
                 self.ground_y = self.BASE_GROUND_Y
 
     def _find_support_block(self):
-        # 플레이어 발 위치 - 중앙 부분만 체크 (가장자리에서 떨어지기 쉽게)
         left, bottom, right, top = self.get_bb()
         foot_y = bottom
-
-        # 발의 중앙 30%만
         foot_width = (right - left)
         margin = foot_width * 0.35
         check_left = left + margin
@@ -515,23 +504,15 @@ class Player1:
         nearest = None
         nearest_top = -9999
 
-        # world 레이어 순회
         for layer in game_world.world:
             for o in layer:
                 if isinstance(o, StageBlock):
                     l, b, r, t = o.get_bb()
-
-                    # 발의 중앙 부분이 블록 범위와 겹치는지 확인
                     horizontal_overlap = not (check_right < l or check_left > r)
-
-                    # 발이 블록 윗면 근처에 있는지 확인
                     vertical_near = foot_y <= t + 10 and foot_y >= t - 5
-
-                    if horizontal_overlap and vertical_near:
-                        # 가장 높은 것 선택 (겹칠 경우)
-                        if t > nearest_top:
-                            nearest = o
-                            nearest_top = t
+                    if horizontal_overlap and vertical_near and t > nearest_top:
+                        nearest = o
+                        nearest_top = t
         return nearest
 
     def handle_event(self, event):
@@ -539,22 +520,18 @@ class Player1:
 
     def draw(self):
         self.state_machine.draw()
-        # 플레이어 위에 "P1" 표시
         if Player1.font:
             Player1.font.draw(self.x - 10, self.y + 50, 'P1', (255, 255, 255))
 
     def get_bb(self):
-        # 현재 상태의 바운딩 박스를 반환
         cur = getattr(self.state_machine, 'cur_state', None)
         if cur and hasattr(cur, 'get_bb'):
             bb = cur.get_bb()
             if bb:
                 return bb
-        # fallback (등장 등에서 None 방지)
         return self.x - 15, self.y - 15, self.x + 15, self.y + 15
 
     def get_attack_bb(self):
-        # 현재 상태가 공격 히트박스를 제공하면 그걸 사용, 아니면 None
         cur = getattr(self.state_machine, 'cur_state', None)
         if cur and hasattr(cur, 'get_attack_bb'):
             return cur.get_attack_bb()
@@ -569,7 +546,6 @@ class Player1:
         def _get_attack_bb(src):
             return getattr(src, 'get_attack_bb', lambda: None)()
 
-        # 공격 처리
         if group.startswith('sword:'):
             atk_bb = _get_attack_bb(other)
             if not atk_bb or getattr(other, 'attack_hit', False):
@@ -581,7 +557,6 @@ class Player1:
             print("Player1 hit! HP:", self.hp)
             return
 
-        # 장애물 충돌 처리
         if group.startswith('obstacle:'):
             bb = getattr(other, 'get_bb', lambda: None)()
             if not bb or getattr(other, 'obstacle_hit', False):
@@ -594,18 +569,14 @@ class Player1:
             game_world.remove_object(other)
             return
 
-        # 스테이지 블록 충돌 처리
         if group.endswith(':stageBlock'):
             block_bb = other.get_bb()
             player_bb = self.get_bb()
-            # 블록 윗면 위치
             block_top = block_bb[3]
-            # 착지 조건: 플레이어 발이 블록 윗면 근처이고 플레이어가 블록 위쪽에서 내려오는 중
             foot_y = player_bb[1]
             cur_state = self.state_machine.cur_state
             descending = hasattr(cur_state, 'yv') and cur_state.yv <= 0
             if foot_y >= block_top - 8 and self.y >= block_top and descending:
-                # 착지 처리
                 self.ground_y = block_top
                 self.y = block_top + (player_bb[3] - player_bb[1]) / 2
                 if hasattr(cur_state, 'yv'):

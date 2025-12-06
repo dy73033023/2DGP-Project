@@ -36,7 +36,6 @@ class Obstacle:
 
     def draw(self):
         Obstacle.images['obstacle'][int(self.frame)].draw(self.x, self.y, self.width, self.length)
-        draw_rectangle(*self.get_bb())
 
     def handle_event(self, event):
         pass

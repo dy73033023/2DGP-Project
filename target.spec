@@ -5,7 +5,7 @@ import pico2d
 sdl2dll_path = os.getenv('PYSDL2_DLL_PATH')
 
 a = Analysis(
-    ['mygame.py'],
+    ['main.py'],
     pathex=[],
     binaries=[(os.path.join(sdl2dll_path, '*.dll'), '.')],
     datas=[],
@@ -25,7 +25,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='mygame',
+    name='main',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
