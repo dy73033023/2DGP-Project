@@ -31,10 +31,20 @@ def remove_object(o):
 
 
 def clear():
-    global world
+    global world, collision_pairs
 
+    # 모든 객체를 collision_pairs에서 제거한 뒤 레이어 비우기
     for layer in world:
+        # 복사 리스트를 만들어 안전하게 순회
+        for o in list(layer):
+            try:
+                remove_collision_object(o)
+            except Exception:
+                pass
         layer.clear()
+
+    # 충돌 페어도 초기화
+    collision_pairs.clear()
 
 # 기존 collide는 유지하지만, 그룹별로 다른 BB를 쓰는 전용 함수를 추가한다.
 def _get_group_bb(obj, group: str, is_first: bool):
